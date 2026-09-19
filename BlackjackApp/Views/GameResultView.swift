@@ -7,20 +7,33 @@ import SwiftUI
 /// carried by colour alone.
 struct GameResultView: View {
     let result: GameResult
+    let payoutDelta: Int
 
     @State private var scale: CGFloat = 0.6
     @State private var shakeProgress: CGFloat = 0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        Text(result.title)
-            .font(.system(size: 24, weight: .heavy, design: .rounded))
-            .multilineTextAlignment(.center)
-            .foregroundStyle(result.tint)
-            .shadow(color: result.tint.opacity(result.isPlayerFavourable ? 0.7 : 0), radius: 10)
-            .scaleEffect(scale)
-            .modifier(ShakeEffect(travel: result.isPlayerUnfavourable ? 6 : 0, progress: shakeProgress))
-            .onAppear { animateIn() }
+        VStack(spacing: 2) {
+            Text(result.title)
+                .font(.system(size: 24, weight: .heavy, design: .rounded))
+                .multilineTextAlignment(.center)
+                .foregroundStyle(result.tint)
+                .shadow(color: result.tint.opacity(result.isPlayerFavourable ? 0.7 : 0), radius: 10)
+                .scaleEffect(scale)
+                .modifier(ShakeEffect(travel: result.isPlayerUnfavourable ? 6 : 0, progress: shakeProgress))
+
+            Text(payoutText)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.white.opacity(0.85))
+        }
+        .onAppear { animateIn() }
+    }
+
+    private var payoutText: String {
+        if payoutDelta > 0 { return "+\(payoutDelta) chips" }
+        if payoutDelta < 0 { return "\(payoutDelta) chips" }
+        return "Bet returned"
     }
 
     private func animateIn() {
@@ -62,6 +75,6 @@ private struct ShakeEffect: GeometryEffect {
 #Preview {
     ZStack {
         Color.green.opacity(0.5).ignoresSafeArea()
-        GameResultView(result: .playerBlackjack)
+        GameResultView(result: .playerBlackjack, payoutDelta: 15)
     }
 }

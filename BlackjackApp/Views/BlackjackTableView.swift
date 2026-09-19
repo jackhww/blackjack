@@ -17,6 +17,19 @@ struct BlackjackTableView: View {
                     .foregroundStyle(.white.opacity(0.9))
                     .padding(.top, 12)
 
+                BetControlsView(
+                    chips: viewModel.chips,
+                    bet: viewModel.canStartNewRound ? viewModel.currentBet : viewModel.activeBet,
+                    canAdjust: viewModel.canAdjustBet,
+                    canIncrease: viewModel.canIncreaseBet,
+                    canDecrease: viewModel.canDecreaseBet,
+                    canReset: viewModel.canResetBankroll,
+                    onIncrease: { viewModel.increaseBet() },
+                    onDecrease: { viewModel.decreaseBet() },
+                    onReset: { viewModel.resetBankroll() }
+                )
+                .padding(.top, 10)
+
                 Spacer(minLength: 12)
 
                 HandView(
@@ -32,7 +45,7 @@ struct BlackjackTableView: View {
                 // popup — so Hit/Stand/New Round stay exactly where they are.
                 Group {
                     if let result = viewModel.result {
-                        GameResultView(result: result)
+                        GameResultView(result: result, payoutDelta: viewModel.lastPayoutDelta)
                     } else {
                         statusText
                     }
@@ -130,6 +143,19 @@ struct BlackjackTableView: View {
                     .tint(.red)
                     .disabled(!viewModel.canStand)
                 }
+
+                if viewModel.canDoubleDown {
+                    Button {
+                        Task { await viewModel.doubleDown() }
+                    } label: {
+                        Text("DOUBLE DOWN")
+                            .font(.subheadline.weight(.bold))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 10)
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(.orange)
+                }
             }
 
             VStack(spacing: 4) {
@@ -158,7 +184,7 @@ struct BlackjackTableView: View {
         switch viewModel.gameState {
         case .ready: return "Dealing…"
         case .dealing: return "Dealing…"
-        case .playerTurn: return "Your move — Hit or Stand"
+        case .playerTurn: return "Your move — Hit, Stand, or Double Down"
         case .dealerTurn: return "Dealer is playing…"
         case .finished: return " "
         }

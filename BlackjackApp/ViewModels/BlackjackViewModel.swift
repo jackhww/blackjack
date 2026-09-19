@@ -12,6 +12,19 @@ final class BlackjackViewModel: ObservableObject {
     @Published private(set) var result: GameResult?
     @Published private(set) var dealerCardHidden: Bool = true
 
+    /// Wagering: `chips` is the player's bankroll, `currentBet` is what the
+    /// next round will risk, and `activeBet` is what the round in progress
+    /// actually risks (it can grow if the player doubles down).
+    @Published private(set) var chips: Int = startingChips
+    @Published private(set) var currentBet: Int = minimumBet
+    @Published private(set) var activeBet: Int = 0
+    /// Chip change from the most recently finished round, for the result banner.
+    @Published private(set) var lastPayoutDelta: Int = 0
+
+    static let startingChips = 500
+    static let minimumBet = 10
+    private static let betStep = 10
+
     /// Cards remaining below this count trigger a fresh, reshuffled deck
     /// before the next deal so we can never run out mid-round.
     private let minimumDeckSize = 15
@@ -32,6 +45,37 @@ final class BlackjackViewModel: ObservableObject {
     var canHit: Bool { gameState == .playerTurn }
     var canStand: Bool { gameState == .playerTurn }
     var canStartNewRound: Bool { gameState == .ready || gameState == .finished }
+
+    /// Double down is only offered on the original two-card hand, and only
+    /// if the player can match their existing bet.
+    var canDoubleDown: Bool {
+        gameState == .playerTurn && playerHand.count == 2 && chips >= activeBet
+    }
+
+    var canAdjustBet: Bool { canStartNewRound }
+    var canIncreaseBet: Bool { canAdjustBet && currentBet + Self.betStep <= chips }
+    var canDecreaseBet: Bool { canAdjustBet && currentBet - Self.betStep >= Self.minimumBet }
+    /// Offered once the player can no longer cover the minimum bet.
+    var canResetBankroll: Bool { chips < Self.minimumBet }
+
+    // MARK: - Betting
+
+    func increaseBet() {
+        guard canIncreaseBet else { return }
+        currentBet += Self.betStep
+    }
+
+    func decreaseBet() {
+        guard canDecreaseBet else { return }
+        currentBet -= Self.betStep
+    }
+
+    /// Refills the bankroll once the player can't afford the minimum bet.
+    func resetBankroll() {
+        guard canResetBankroll else { return }
+        chips = Self.startingChips
+        currentBet = Self.minimumBet
+    }
 
     // MARK: - Hand value calculation
 
@@ -83,18 +127,33 @@ final class BlackjackViewModel: ObservableObject {
         return playerHasBlackjack ? .playerBlackjack : .dealerBlackjack
     }
 
+    /// Chip profit/loss for a finished bet, excluding the returned stake.
+    /// Blackjack pays 3:2, a normal win or dealer bust pays 1:1, a push
+    /// returns the stake with no profit, and any loss forfeits it.
+    static func payoutDelta(for outcome: GameResult, bet: Int) -> Int {
+        switch outcome {
+        case .playerBlackjack: return bet * 3 / 2
+        case .playerWin, .dealerBust: return bet
+        case .push: return 0
+        case .dealerBlackjack, .dealerWin, .playerBust: return -bet
+        }
+    }
+
     // MARK: - Round lifecycle
 
-    /// Begins a new round: clears hands, reshuffles if needed, deals four
-    /// cards, and checks for an immediate Blackjack.
+    /// Begins a new round: places the bet, clears hands, reshuffles if
+    /// needed, deals four cards, and checks for an immediate Blackjack.
     func startNewRound() async {
-        guard canStartNewRound else { return }
+        guard canStartNewRound, chips >= currentBet else { return }
 
         gameState = .dealing
         result = nil
+        lastPayoutDelta = 0
         playerHand = []
         dealerHand = []
         dealerCardHidden = true
+        activeBet = currentBet
+        chips -= activeBet
         ensureDeckHasEnoughCards()
 
         await dealCard(to: .player)
@@ -134,6 +193,23 @@ final class BlackjackViewModel: ObservableObject {
         }
     }
 
+    /// Doubles the bet, takes exactly one more card, then forces a stand —
+    /// only available on the original two-card hand.
+    func doubleDown() async {
+        guard canDoubleDown else { return }
+
+        chips -= activeBet
+        activeBet *= 2
+
+        await dealCard(to: .player)
+
+        if playerScore > 21 {
+            await finishRound(with: .playerBust)
+        } else {
+            await stand()
+        }
+    }
+
     /// Ends the player's turn, reveals the dealer's hole card, and plays out
     /// the dealer's hand. Triggered by the Stand button or swipe-down.
     func stand() async {
@@ -156,6 +232,13 @@ final class BlackjackViewModel: ObservableObject {
     private func finishRound(with outcome: GameResult) async {
         result = outcome
         gameState = .finished
+
+        let delta = Self.payoutDelta(for: outcome, bet: activeBet)
+        lastPayoutDelta = delta
+        chips += activeBet + delta
+        // Keep the next bet affordable even after a loss shrinks the bankroll.
+        currentBet = min(currentBet, chips)
+
         if outcome.isPlayerFavourable {
             AudioManager.shared.play(.win)
         } else if outcome.isPlayerUnfavourable {

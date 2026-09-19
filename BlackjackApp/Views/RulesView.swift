@@ -22,8 +22,13 @@ struct RulesView: View {
                     Text("1. You and the dealer each get two cards. One dealer card stays hidden.")
                     Text("2. Hit to take another card.")
                     Text("3. Stand to keep your current hand.")
-                    Text("4. The dealer must keep drawing until reaching at least 17.")
-                    Text("5. Going over 21 is a bust and loses the round.")
+                    Text("4. Double Down: on your first two cards, double your bet to take exactly one more card, then automatically stand.")
+                    Text("5. The dealer must keep drawing until reaching at least 17.")
+                    Text("6. Going over 21 is a bust and loses the round.")
+                }
+
+                Section("Wagers") {
+                    Text("Adjust your bet before dealing. Blackjack pays 3:2, a win pays 1:1, and a push returns your bet.")
                 }
 
                 Section("Controls") {

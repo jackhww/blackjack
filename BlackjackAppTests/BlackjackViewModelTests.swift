@@ -81,6 +81,27 @@ struct BlackjackViewModelTests {
         #expect(BlackjackViewModel.dealerShouldHit(score: 17) == false)
     }
 
+    // MARK: - Wagers
+
+    @Test func blackjackPaysThreeToTwo() {
+        #expect(BlackjackViewModel.payoutDelta(for: .playerBlackjack, bet: 20) == 30)
+    }
+
+    @Test func winPaysEven() {
+        #expect(BlackjackViewModel.payoutDelta(for: .playerWin, bet: 20) == 20)
+        #expect(BlackjackViewModel.payoutDelta(for: .dealerBust, bet: 20) == 20)
+    }
+
+    @Test func pushReturnsBetWithNoProfit() {
+        #expect(BlackjackViewModel.payoutDelta(for: .push, bet: 20) == 0)
+    }
+
+    @Test func lossForfeitsTheBet() {
+        #expect(BlackjackViewModel.payoutDelta(for: .dealerWin, bet: 20) == -20)
+        #expect(BlackjackViewModel.payoutDelta(for: .playerBust, bet: 20) == -20)
+        #expect(BlackjackViewModel.payoutDelta(for: .dealerBlackjack, bet: 20) == -20)
+    }
+
     // MARK: - Deck
 
     @Test func freshDeckHasFiftyTwoUniqueCards() {
