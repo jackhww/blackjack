@@ -1,41 +1,26 @@
 import SwiftUI
 
-/// Overlay shown when a round finishes: big result text with a matching
-/// animation, plus the button to start the next round. The text itself
-/// always states the outcome so meaning is never carried by colour alone.
+/// Inline result banner shown in place of the status text once a round
+/// ends. This is deliberately not a modal/overlay — it sits in the table's
+/// normal layout flow so Hit/Stand/New Round controls never move or get
+/// covered. The text itself always states the outcome so meaning is never
+/// carried by colour alone.
 struct GameResultView: View {
     let result: GameResult
-    let onNewRound: () -> Void
 
     @State private var scale: CGFloat = 0.6
     @State private var shakeProgress: CGFloat = 0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        VStack(spacing: 24) {
-            Text(result.title)
-                .font(.system(size: 34, weight: .heavy, design: .rounded))
-                .multilineTextAlignment(.center)
-                .foregroundStyle(result.tint)
-                .shadow(color: result.tint.opacity(result.isPlayerFavourable ? 0.8 : 0), radius: 14)
-                .scaleEffect(scale)
-                .modifier(ShakeEffect(travel: result.isPlayerUnfavourable ? 8 : 0, progress: shakeProgress))
-
-            Button(action: onNewRound) {
-                Text("New Round")
-                    .font(.headline)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .background(Color.white)
-                    .foregroundStyle(.black)
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
-            }
-            .padding(.horizontal, 32)
-        }
-        .padding(28)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24))
-        .padding(.horizontal, 24)
-        .onAppear { animateIn() }
+        Text(result.title)
+            .font(.system(size: 24, weight: .heavy, design: .rounded))
+            .multilineTextAlignment(.center)
+            .foregroundStyle(result.tint)
+            .shadow(color: result.tint.opacity(result.isPlayerFavourable ? 0.7 : 0), radius: 10)
+            .scaleEffect(scale)
+            .modifier(ShakeEffect(travel: result.isPlayerUnfavourable ? 6 : 0, progress: shakeProgress))
+            .onAppear { animateIn() }
     }
 
     private func animateIn() {
@@ -77,6 +62,6 @@ private struct ShakeEffect: GeometryEffect {
 #Preview {
     ZStack {
         Color.green.opacity(0.5).ignoresSafeArea()
-        GameResultView(result: .playerBlackjack, onNewRound: {})
+        GameResultView(result: .playerBlackjack)
     }
 }

@@ -28,7 +28,16 @@ struct BlackjackTableView: View {
 
                 Spacer(minLength: 8)
 
-                statusText
+                // Result banner replaces the status line inline — never a
+                // popup — so Hit/Stand/New Round stay exactly where they are.
+                Group {
+                    if let result = viewModel.result {
+                        GameResultView(result: result)
+                    } else {
+                        statusText
+                    }
+                }
+                .frame(minHeight: 44)
 
                 Spacer(minLength: 8)
 
@@ -45,13 +54,6 @@ struct BlackjackTableView: View {
             }
             .padding(.horizontal, 16)
             .padding(.bottom, 12)
-
-            if let result = viewModel.result {
-                GameResultView(result: result) {
-                    Task { await viewModel.startNewRound() }
-                }
-                .transition(.opacity)
-            }
         }
         .contentShape(Rectangle())
         .gesture(swipeGesture)
@@ -87,32 +89,47 @@ struct BlackjackTableView: View {
             .frame(minHeight: 20)
     }
 
+    @ViewBuilder
     private var controls: some View {
         VStack(spacing: 14) {
-            HStack(spacing: 16) {
+            if viewModel.gameState == .finished {
                 Button {
-                    Task { await viewModel.hit() }
+                    Task { await viewModel.startNewRound() }
                 } label: {
-                    Text("HIT")
+                    Text("NEW ROUND")
                         .font(.title3.weight(.bold))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(.blue)
-                .disabled(!viewModel.canHit)
+                .tint(.green)
+                .disabled(!viewModel.canStartNewRound)
+            } else {
+                HStack(spacing: 16) {
+                    Button {
+                        Task { await viewModel.hit() }
+                    } label: {
+                        Text("HIT")
+                            .font(.title3.weight(.bold))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.blue)
+                    .disabled(!viewModel.canHit)
 
-                Button {
-                    Task { await viewModel.stand() }
-                } label: {
-                    Text("STAND")
-                        .font(.title3.weight(.bold))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
+                    Button {
+                        Task { await viewModel.stand() }
+                    } label: {
+                        Text("STAND")
+                            .font(.title3.weight(.bold))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.red)
+                    .disabled(!viewModel.canStand)
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(.red)
-                .disabled(!viewModel.canStand)
             }
 
             VStack(spacing: 4) {
