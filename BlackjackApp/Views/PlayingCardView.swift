@@ -7,50 +7,52 @@ struct PlayingCardView: View {
     let card: Card
     var isFaceUp: Bool = true
 
-    private let cardSize = CGSize(width: 64, height: 92)
+    private let cardSize = CGSize(width: 68, height: 96)
 
     var body: some View {
-        RoundedRectangle(cornerRadius: 10)
-            .fill(Color.white)
-            .frame(width: cardSize.width, height: cardSize.height)
-            .overlay {
-                if isFaceUp {
-                    faceContent
-                } else {
-                    backContent
-                }
+        ZStack {
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color.white)
+            if isFaceUp {
+                faceContent
+            } else {
+                backContent
             }
-            .overlay(
-                RoundedRectangle(cornerRadius: 10)
-                    .strokeBorder(Color.black.opacity(0.15), lineWidth: 1)
-            )
-            .shadow(color: .black.opacity(0.35), radius: 3, y: 2)
-            .accessibilityLabel(isFaceUp ? "\(card.rank.label) of \(card.suit.rawValue)" : "Face-down card")
+        }
+        .frame(width: cardSize.width, height: cardSize.height)
+        // Clip so rank/suit content can never render outside the card body.
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .strokeBorder(Color.black.opacity(0.15), lineWidth: 1)
+        )
+        .shadow(color: .black.opacity(0.35), radius: 3, y: 2)
+        .accessibilityLabel(isFaceUp ? "\(card.rank.label) of \(card.suit.rawValue)" : "Face-down card")
     }
 
     private var faceContent: some View {
-        VStack {
+        VStack(spacing: 0) {
             HStack {
                 cornerLabel
                 Spacer()
             }
-            Spacer()
+            Spacer(minLength: 4)
             Text(card.suit.symbol)
-                .font(.system(size: 26))
-            Spacer()
+                .font(.system(size: 22))
+            Spacer(minLength: 4)
             HStack {
                 Spacer()
                 cornerLabel.rotationEffect(.degrees(180))
             }
         }
-        .padding(6)
+        .padding(5)
         .foregroundStyle(card.suit.color)
     }
 
     private var cornerLabel: some View {
         VStack(spacing: 0) {
-            Text(card.rank.label).font(.system(size: 15, weight: .bold))
-            Text(card.suit.symbol).font(.system(size: 12))
+            Text(card.rank.label).font(.system(size: 13, weight: .bold))
+            Text(card.suit.symbol).font(.system(size: 10))
         }
     }
 
